@@ -1,0 +1,44 @@
+//podTemplate(inheritFrom: 'jnlp-slave', label: 'jnlp-slave', cloud: 'Kubernetes', namespace: 'cicd',
+//     containers: [
+//     containerTemplate( 
+//        name: 'jnlp', 
+//        image: '127.0.0.1:30400/jnlp-slave-kubectl:1.3', 
+//        alwaysPullImage: true, 
+//       args: '${computer.jnlpmac} ${computer.name}',
+//        privileged: true),
+//     ],
+//     volumes: [hostPathVolume(hostPath: '/var/run/docker.sock', mountPath: '/var/run/docker.sock'), 
+//          hostPathVolume(hostPath: '/bin/docker', mountPath: '/bin/docker')]) 
+ // {
+
+node ('jnlp-slave'){
+
+    checkout scm
+
+    env.docker_api_version="1.23"
+    
+    sh "git rev-parse --short head > commit-id"
+
+    tag = readfile('commit-id').replace("\n", "").replace("\r", "")
+    appname = "frontend-app"
+    registryhost = "harbor.growingio.com/ci/"
+    imagename = "${registryhost}${appname}:${tag}"
+    env.buildimg=imagename
+
+    stage 'npm install'
+        sh "yarnpkg -v && npm -v"
+
+    stage "build"
+    
+        sh "echo 'run docker build '"
+    
+    stage "push"
+
+        sh "echo 'run docker push' "
+
+    stage "deploy"
+
+        sh "echo 'run sed 's#harbor.growingio.com/frontend-app:latest#'$buildimg'#' deployment.yaml | kubectl apply -f -'"
+        sh "echo 'run kubectl rollout status deployment/frontend-app'"
+}
+}

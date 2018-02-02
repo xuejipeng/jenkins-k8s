@@ -1,0 +1,51 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: jenkins
+  namespace: ci
+  labels:
+    app: jenkins
+spec:
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: jenkins
+        tier: jenkins
+    spec:
+      containers:
+      - image: jenkins-k8s-master:1.0 //这里换成你自己制作的镜像的名称
+        name: jenkins
+        securityContext:
+          privileged: true
+        ports:
+        - name: jenkins
+          containerPort: 8080
+        - name: agent
+          containerPort: 50000
+          protocol: TCP
+        volumeMounts:
+        - name: docker
+          mountPath: /var/run/docker.sock //这里使用docker in docker的方式，将 docker.sock 命令挂在到 image 中
+        - name: jenkinshome
+          mountPath: /var/jenkins_home
+        - name: kube-config
+          mountPath: /root/.kube
+        - name: docker-binary
+          mountPath: /usr/bin/docker //这里使用docker in docker的方式，将docker 命令挂在到 image 中
+      volumes:
+      - name: docker
+        hostPath:
+          path: /var/run/docker.sock
+      - name: kube-config
+        nfs:
+          server: 10.10.14.216
+          path: "/data/nfsshare/k8s/.kube" //这里将集群的 .kube 文件通过 nfs的方式挂载到容器中
+      - name: docker-binary
+        hostPath:
+          path: /usr/bin/docker
+      - name: jenkinshome
+        nfs:
+          server: 10.10.14.216
+          path: "/data/nfsshare/k8s/jenkins/home" //这里讲 jenkins 的工作目录挂在到NFS，实现持久化
