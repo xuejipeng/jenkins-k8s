@@ -1,1 +1,2 @@
-Kubernetes plugin:1.1.3
+Kubernetes plugin:1.1.4
+Variant Plugin:1.1
